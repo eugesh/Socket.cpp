@@ -35,10 +35,11 @@ unsigned __stdcall Answer(void* a) {
   Socket* s = (Socket*) a;
 
   while (1) {
-    std::string r = s->ReceiveLine();
+    int statusCode;
+    std::string r = s->ReceiveLine(statusCode);
     if (r.empty()) break;
 	std::cout << "The line we received - " << r;
-    s->SendLine(r);
+    s->SendLine(r, statusCode);
   }
 
   delete s;
@@ -53,10 +54,11 @@ int main(int argc, char* argv[]) {
 
   if (err == 0)
   {
-	  SocketServer in(2000, 5, "");
+      int statusCode;
+      SocketServer in(2000, 5, "", statusCode);
 
 	  while (1) {
-		Socket* s=in.Accept();
+        Socket* s=in.Accept(statusCode);
 
 		unsigned ret;
 		_beginthreadex((void*)NULL,0,Answer,(void*) s,0,&ret);

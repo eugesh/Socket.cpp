@@ -36,7 +36,8 @@ int         portServer;
 
 unsigned __stdcall RunProxyThread (void* a) {
   Socket*      s = (Socket*) a;
-  SocketClient c(addrServer, portServer);
+  int er;
+  SocketClient c(addrServer, portServer, er);
 
   while (1) {
     SocketSelect sel(s, &c);

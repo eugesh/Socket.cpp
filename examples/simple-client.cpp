@@ -8,7 +8,8 @@ using namespace std;
 int main() {
 
   try {
-    SocketClient s("", 2000);
+    int er;
+    SocketClient s("", 2000, er);
 
 	string clientMessage;
     /*s.SendLine("Host: www.renenyffenegger.ch");
@@ -16,8 +17,9 @@ int main() {
 
     while (1) {
 	  getline(cin, clientMessage);
-	  s.SendLine(clientMessage);
-	  string l = s.ReceiveLine();
+      int statusCode;
+      s.SendLine(clientMessage, statusCode);
+      string l = s.ReceiveLine(statusCode);
       if (l.empty()) break;
       cout << l;
       cout.flush();
