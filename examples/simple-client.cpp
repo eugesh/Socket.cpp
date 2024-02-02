@@ -1,5 +1,6 @@
-#include "Socket.h"
+#pragma comment(lib, "Ws2_32.lib")
 
+#include "Socket.h"
 #include <iostream>
 
 using namespace std;
@@ -7,14 +8,16 @@ using namespace std;
 int main() {
 
   try {
-    SocketClient s("www.renenyffenegger.ch", 80);
+    SocketClient s("", 2000);
 
-    s.SendLine("GET / HTTP/1.0");
-    s.SendLine("Host: www.renenyffenegger.ch");
-    s.SendLine("");
+	string clientMessage;
+    /*s.SendLine("Host: www.renenyffenegger.ch");
+    s.SendLine("");*/
 
     while (1) {
-      string l = s.ReceiveLine();
+	  getline(cin, clientMessage);
+	  s.SendLine(clientMessage);
+	  string l = s.ReceiveLine();
       if (l.empty()) break;
       cout << l;
       cout.flush();

@@ -24,10 +24,12 @@
    René Nyffenegger rene.nyffenegger@adp-gmbh.ch
 */
 
+#pragma comment(lib, "Ws2_32.lib")
 
 #include "Socket.h"
 #include <process.h>
 #include <string>
+#include <iostream>
 
 unsigned __stdcall Answer(void* a) {
   Socket* s = (Socket*) a;
@@ -35,6 +37,7 @@ unsigned __stdcall Answer(void* a) {
   while (1) {
     std::string r = s->ReceiveLine();
     if (r.empty()) break;
+	std::cout << "The line we received - " << r;
     s->SendLine(r);
   }
 
@@ -44,14 +47,23 @@ unsigned __stdcall Answer(void* a) {
 }
 
 int main(int argc, char* argv[]) {
-  SocketServer in(2000,5);
 
-  while (1) {
-    Socket* s=in.Accept();
+  WSADATA wsaData;
+  int err = WSAStartup(0x202, &wsaData);
 
-    unsigned ret;
-    _beginthreadex(0,0,Answer,(void*) s,0,&ret);
-  }
+  if (err == 0)
+  {
+	  SocketServer in(2000, 5, "");
+
+	  while (1) {
+		Socket* s=in.Accept();
+
+		unsigned ret;
+		_beginthreadex((void*)NULL,0,Answer,(void*) s,0,&ret);
+	  }
+	  WSACleanup();
+  } else
+	  printf("Something went wrong. The error code - %d.\n", err);
  
   return 0;
 }

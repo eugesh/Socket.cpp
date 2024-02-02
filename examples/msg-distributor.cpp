@@ -58,15 +58,15 @@ unsigned __stdcall Connection(void* a) {
   return 0;
 }
 
-int main() {
-  SocketServer in(2000,5);
-  
-  while (1) {
-    Socket* s=in.Accept();
-  
-    unsigned ret;
-    _beginthreadex(0,0,Connection,(void*) s,0,&ret);
-  }
-  
-  return 0;
-}
+//int main() {
+//  SocketServer in(2000,5);
+//
+//  while (1) {
+//    Socket* s=in.Accept();
+//
+//    unsigned ret;
+//    _beginthreadex(0,0,Connection,(void*) s,0,&ret);
+//  }
+//
+//  return 0;
+//}

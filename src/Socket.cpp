@@ -1,3 +1,4 @@
+#pragma comment(lib, "IPHLPAPI.lib")
 /* 
    Socket.cpp
 
@@ -24,43 +25,64 @@
    René Nyffenegger rene.nyffenegger@adp-gmbh.ch
 */
 
-
 #include "Socket.h"
 #include <iostream>
+#include <cstring>
+#include <string>
+#include <iphlpapi.h>
+#include <ws2tcpip.h>
 
 using namespace std;
 
 int Socket::nofSockets_= 0;
 
-void Socket::Start() {
+void Socket::Start(int& statusCode) {
   if (!nofSockets_) {
     WSADATA info;
     if (WSAStartup(MAKEWORD(2,0), &info)) {
-      throw "Could not start WSA";
+      statusCode = -1;
+	  return;
     }
   }
   ++nofSockets_;
+  statusCode = 0;
 }
 
 void Socket::End() {
   WSACleanup();
 }
 
-Socket::Socket() : s_(0) {
-  Start();
+Socket::Socket(int& statusCode) : s_(0) {
+
+  Start(statusCode);
+  if (statusCode != 0)
+  {
+	  std::cerr << "Failed to start a socket.\n";
+	  return;
+  }
+
   // UDP: use SOCK_DGRAM instead of SOCK_STREAM
   s_ = socket(AF_INET,SOCK_STREAM,0);
 
   if (s_ == INVALID_SOCKET) {
-    throw "INVALID_SOCKET";
+    statusCode = INVALID_SOCKET;
+	std::cerr << "Failed to initialize a socket.\n";
+	return;
   }
 
   refCounter_ = new int(1);
+  statusCode = 0;
 }
 
-Socket::Socket(SOCKET s) : s_(s) {
-  Start();
+Socket::Socket(SOCKET s, int& statusCode) : s_(s) {
+  Start(statusCode);
+  if (statusCode != 0)
+  {
+	std::cerr << "Failed to start a socket.\n";
+	return;
+  }
   refCounter_ = new int(1);
+  statusCode = 0;
 };
 
 Socket::~Socket() {
@@ -122,51 +144,160 @@ std::string Socket::ReceiveBytes() {
   return ret;
 }
 
-std::string Socket::ReceiveLine() {
+std::string Socket::ReceiveLine(int& statusCode) {
   std::string ret;
+  int status;
   while (1) {
     char r;
+	status = recv(s_, &r, 1, 0);
+    if (status == 0)
+	{
+		// not connected anymore;
+		// ... but last line sent
+		// might not end in \n,
+		// so return ret anyway.
+		return ret;
+	}
+	else if (status == SOCKET_ERROR)
+	{
+		statusCode = WSAGetLastError();
+		switch (statusCode)
+		{
+			case WSAENETDOWN:
+			{
+				std::cerr << "Network is down. Socket operation encountered a dead network.\n";
+				break;
+			}
+			case WSAENETRESET:
+			{
+				std::cerr << "Network dropped connection on reset.\n";
+				break;
+			}
+			case WSAECONNABORTED:
+			{
+				std::cerr << "An established connection was aborted by the software in your host computer.\n";
+				break;
+			}
+			case WSAECONNRESET:
+			{
+				std::cerr << "An existing connection was forcibly closed by the remote host.\n";
+				break;
+			}
+			case WSAETIMEDOUT:
+			{
+				std::cerr << "Connection timed out. The connected host has failed to respond.\n";
+				break;
+			}
+			default:
+			{
+				std::cerr << "Произошла неизвестная ошибка - " << statusCode << ".\n";
+				break;
+			}
+		}		// switch clause
+		return "";
+	}
 
-    switch(recv(s_, &r, 1, 0)) {
-      case 0: // not connected anymore;
-              // ... but last line sent
-              // might not end in \n,
-              // so return ret anyway.
-        return ret;
-      case -1:
-        return "";
-//      if (errno == EAGAIN) {
-//        return ret;
-//      } else {
-//      // not connected anymore
-//      return "";
-//      }
-    }
-
+	statusCode = 0;
     ret += r;
     if (r == '\n')  return ret;
   }
 }
 
-void Socket::SendLine(std::string s) {
+void Socket::SendLine(std::string& s, int& statusCode) {
   s += '\n';
-  send(s_,s.c_str(),s.length(),0);
+  int status;
+
+  while (1) {
+	status = send(s_,s.c_str(),s.length(),0);
+	if (status != SOCKET_ERROR)	// everything went fine
+	{
+		statusCode = 0;
+		return;
+	}
+    else 						// if error occured
+	{
+		statusCode = WSAGetLastError();
+		switch (statusCode)
+		{
+			case WSAENETDOWN:
+			{
+				std::cerr << "Network is down. Socket operation encountered a dead network.\n";
+				return;
+			}
+			case WSAENETRESET:
+			{
+				std::cerr << "Network dropped connection on reset.\n";
+				return;
+			}
+			case WSAECONNABORTED:
+			{
+				std::cerr << "An established connection was aborted by the software in your host computer.\n";
+				return;
+			}
+			case WSAECONNRESET:
+			{
+				std::cerr << "An existing connection was forcibly closed by the remote host.\n";
+				return;
+			}
+			case WSAEHOSTUNREACH:
+			{
+				std::cerr << "Unreachable host.\n";
+				return;
+			}
+			case WSAETIMEDOUT:
+			{
+				std::cerr << "Connection timed out. The connected host has failed to respond.\n";
+				return;
+			}
+			default:
+			{
+				std::cerr << "Произошла неизвестная ошибка - " << statusCode << ".\n";
+				return;
+			}
+		}		// switch clause
+	}		// else if (status == SOCKET_ERROR)
+  }	// while (1)
 }
 
 void Socket::SendBytes(const std::string& s) {
   send(s_,s.c_str(),s.length(),0);
 }
 
-SocketServer::SocketServer(int port, int connections, TypeSocket type) {
+// добавлено
+void Socket::SendBytes(const char* buf, int len) {
+  send(s_, buf, len, 0);
+}
+
+void getAddressByAdapterName(const std::string& adapterName, std::string& ipAddress, int& statusCode);
+
+SocketServer::SocketServer(int port, int connections, const std::string& adapater_name, int& statusCode, TypeSocket type) 
+							: Socket(statusCode) {
+
+  if (statusCode != 0)	return;		// если произошла ошибка в конструкторе Socket
+
   sockaddr_in sa;
 
   memset(&sa, 0, sizeof(sa));
 
   sa.sin_family = PF_INET;             
-  sa.sin_port = htons(port);          
+  sa.sin_port = htons(port);
+
+  std::string ip_address;
+  getAddressByAdapterName(adapater_name, ip_address, statusCode);
+  if (statusCode != 0)
+  {
+	std::cerr << "Error: Failed to get the IP address in the specified network.\n";
+	return;
+  }
+
+  sa.sin_addr.s_addr = inet_addr(ip_address.c_str());
+  std::clog << "The address of host (in . notation): " << ip_address << "\n";
+
   s_ = socket(AF_INET, SOCK_STREAM, 0);
   if (s_ == INVALID_SOCKET) {
-    throw "INVALID_SOCKET";
+	std::cerr << "Error: INVALID SOCKET.\n";
+    statusCode = INVALID_SOCKET;
+	return;
   }
 
   if(type==NonBlockingSocket) {
@@ -176,14 +307,19 @@ SocketServer::SocketServer(int port, int connections, TypeSocket type) {
 
   /* bind the socket to the internet address */
   if (bind(s_, (sockaddr *)&sa, sizeof(sockaddr_in)) == SOCKET_ERROR) {
-    closesocket(s_);
-    throw "INVALID_SOCKET";
+	std::cerr << "Error: INVALID SOCKET. The code of error - " << WSAGetLastError() << ".\n";
+	closesocket(s_);
+	WSACleanup();
+	statusCode = SOCKET_ERROR;
+    return;
   }
-  
+
+  std::clog << "Successfully binded.\n";
+  statusCode = 0;
   listen(s_, connections);                               
 }
 
-Socket* SocketServer::Accept() {
+Socket* SocketServer::Accept(int& statusCode) {
   SOCKET new_sock = accept(s_, 0, 0);
   if (new_sock == INVALID_SOCKET) {
     int rc = WSAGetLastError();
@@ -191,21 +327,35 @@ Socket* SocketServer::Accept() {
       return 0; // non-blocking call, no request pending
     }
     else {
-      throw "Invalid Socket";
+      statusCode = INVALID_SOCKET;
+	  std::cerr << "Failed to accept a socket.\n";
+	  return NULL;
     }
   }
 
-  Socket* r = new Socket(new_sock);
+  Socket* r = new Socket(new_sock, statusCode);
+  if (statusCode != 0) {
+	std::cerr << "Failed to initialize a socket.\n";
+	return NULL;
+  }
+
+  statusCode = 0;
   return r;
 }
 
-SocketClient::SocketClient(const std::string& host, int port) : Socket() {
-  std::string error;
+SocketClient::SocketClient(const std::string& host, int port, int& statusCode) : Socket(statusCode) {
+
+  if (statusCode != 0)	return;		// если произошла ошибка в конструкторе Socket
+
+  char error[256];
 
   hostent *he;
   if ((he = gethostbyname(host.c_str())) == 0) {
-    error = strerror(errno);
-    throw error;
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, errno, MAKELANGID (LANG_NEUTRAL, SUBLANG_DEFAULT),
+					error, sizeof(error), NULL);
+	statusCode = -1;
+    std::cerr << error << "\n";
+	return;
   }
 
   sockaddr_in addr;
@@ -214,10 +364,14 @@ SocketClient::SocketClient(const std::string& host, int port) : Socket() {
   addr.sin_addr = *((in_addr *)he->h_addr);
   memset(&(addr.sin_zero), 0, 8); 
 
-  if (::connect(s_, (sockaddr *) &addr, sizeof(sockaddr))) {
-    error = strerror(WSAGetLastError());
-    throw error;
+  while (1)
+  {
+	int resultCode = ::connect(s_, (sockaddr *) &addr, sizeof(sockaddr));
+	if (resultCode == SOCKET_ERROR)
+	  continue;
+	break;
   }
+  statusCode = 0;
 }
 
 SocketSelect::SocketSelect(Socket const * const s1, Socket const * const s2, TypeSocket type) {
@@ -246,4 +400,77 @@ SocketSelect::SocketSelect(Socket const * const s1, Socket const * const s2, Typ
 bool SocketSelect::Readable(Socket const* const s) {
   if (FD_ISSET(s->s_,&fds_)) return true;
      return false;
+}
+
+void getAddressByAdapterName(const std::string& adapterName, std::string& ipAddress, int& statusCode)
+{
+    int result;
+
+    // Get the length of all the adapters addresses
+	ULONG buflen = 0;
+	result = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, NULL, &buflen);
+    if (result != ERROR_BUFFER_OVERFLOW)
+	{
+		std::cerr << "GetAdaptersAddresses failed with error: " << result << ".\n";
+		statusCode = -1;
+		return;
+	}
+
+	// Allocate memory for all the adapters addresses
+	PIP_ADAPTER_ADDRESSES adaptersAddresses = (PIP_ADAPTER_ADDRESSES)malloc(buflen);
+	if (!adaptersAddresses)
+	{
+		std::cerr << "Malloc failed.\n";
+		statusCode = -1;
+		return;
+	}
+
+	// Retreive all the adapters addresses (and store in adaptersAddresses)
+	result = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, adaptersAddresses, &buflen);
+    if (result != ERROR_SUCCESS)
+	{
+		std::cerr << "GetAdaptersAddresses failed with error: " << result << ".\n";
+		free(adaptersAddresses);
+		statusCode = -1;
+		return;
+	}
+
+	PIP_ADAPTER_ADDRESSES adapter = NULL;
+	std::wstring w_adapterName(adapterName.begin(), adapterName.end());
+
+	for (PIP_ADAPTER_ADDRESSES adapterAddress = adaptersAddresses; adapterAddress != NULL; adapterAddress = adapterAddress->Next) 
+	{
+		if (w_adapterName.compare(adapterAddress->FriendlyName) == 0)
+		{
+			adapter = adapterAddress;
+			break;
+		}
+	}
+
+    // Get IPv4 address
+    if (adapter)
+	{
+		PIP_ADAPTER_UNICAST_ADDRESS unicast;
+        for (unicast = adapter->FirstUnicastAddress; unicast != NULL; unicast = unicast->Next)
+		{
+            if (unicast->Address.lpSockaddr->sa_family == AF_INET)					// if TCP network protocol is used
+			{
+				sockaddr_in* sockaddr = (sockaddr_in*)unicast->Address.lpSockaddr;
+				char ipstr[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &(sockaddr->sin_addr), ipstr, INET_ADDRSTRLEN);
+				ipAddress = ipstr;
+				break;
+			}
+		}
+	}
+    else
+	{
+		std::cerr << "Couldn't find an adapter with the specified name - " << adapterName << " .\n";
+		free(adaptersAddresses);
+		statusCode = -1;
+		return;
+	}
+
+	free(adaptersAddresses);
+	statusCode = 0;
 }
