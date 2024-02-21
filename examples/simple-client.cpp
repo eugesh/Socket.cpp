@@ -5,36 +5,37 @@
 
 using namespace std;
 
-int main() {
+int main()
+{
+    try {
+        int er = 0;
+        SocketClient s("localhost", 2000, er);
 
-  try {
-    int er;
-    SocketClient s("", 2000, er);
+        string clientMessage;
+        /*s.SendLine("Host: www.renenyffenegger.ch");
+        s.SendLine("");*/
 
-	string clientMessage;
-    /*s.SendLine("Host: www.renenyffenegger.ch");
-    s.SendLine("");*/
+        while (1) {
+            getline(cin, clientMessage);
+            int statusCode;
+            s.SendLine(clientMessage, statusCode);
+            string l = s.ReceiveLine(statusCode);
+            if (l.empty())
+                break;
+            cout << l;
+            cout.flush();
+        }
 
-    while (1) {
-	  getline(cin, clientMessage);
-      int statusCode;
-      s.SendLine(clientMessage, statusCode);
-      string l = s.ReceiveLine(statusCode);
-      if (l.empty()) break;
-      cout << l;
-      cout.flush();
+    }
+    catch (const char* s) {
+        cerr << s << endl;
+    }
+    catch (std::string s) {
+        cerr << s << endl;
+    }
+    catch (...) {
+        cerr << "unhandled exception\n";
     }
 
-  } 
-  catch (const char* s) {
-    cerr << s << endl;
-  } 
-  catch (std::string s) {
-    cerr << s << endl;
-  } 
-  catch (...) {
-    cerr << "unhandled exception\n";
-  }
-
-  return 0;
+    return 0;
 }

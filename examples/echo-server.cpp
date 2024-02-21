@@ -32,40 +32,45 @@
 #include <iostream>
 
 unsigned __stdcall Answer(void* a) {
-  Socket* s = (Socket*) a;
+    Socket* s = (Socket*) a;
 
-  while (1) {
-    int statusCode;
-    std::string r = s->ReceiveLine(statusCode);
-    if (r.empty()) break;
-	std::cout << "The line we received - " << r;
-    s->SendLine(r, statusCode);
-  }
+    while (1) {
+        int statusCode;
+        std::string r = s->ReceiveLine(statusCode);
+        if (r.empty())
+            break;
+        std::cout << "The line we received - " << r;
+        s->SendLine(r, statusCode);
+    }
 
-  delete s;
+    delete s;
 
-  return 0;
+    return 0;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
+    WSADATA wsaData;
+    int err = WSAStartup(0x202, &wsaData);
 
-  WSADATA wsaData;
-  int err = WSAStartup(0x202, &wsaData);
+    if (err == 0)
+    {
+        int statusCode = 0;
+        SocketServer in(2000, 1, "", statusCode);
 
-  if (err == 0)
-  {
-      int statusCode;
-      SocketServer in(2000, 5, "", statusCode);
+        while (1) {
+            Socket* s = NULL;
+            s = in.Accept(statusCode);
 
-	  while (1) {
-        Socket* s=in.Accept(statusCode);
+            if (s) {
+                unsigned ret;
+                _beginthreadex((void*)NULL, 0, Answer, (void*) s, 0, &ret);
+            }
+        }
+        WSACleanup();
+    } else {
+        printf("Something went wrong. The error code - %d.\n", err);
+    }
 
-		unsigned ret;
-		_beginthreadex((void*)NULL,0,Answer,(void*) s,0,&ret);
-	  }
-	  WSACleanup();
-  } else
-	  printf("Something went wrong. The error code - %d.\n", err);
- 
-  return 0;
+    return 0;
 }
