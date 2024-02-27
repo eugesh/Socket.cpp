@@ -28,75 +28,104 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#include <WinSock2.h>
-
 #include <string>
 #include <exception>
 
 enum TypeSocket {BlockingSocket, NonBlockingSocket};
 
-class Socket {
+class SocketClientQt;
+class SocketServerQt;
+
+class Socket
+{
 public:
 
-  virtual ~Socket();
-  Socket(const Socket&);
-  Socket& operator=(Socket&);
+    virtual ~Socket();
+    // Socket();
+    Socket(const Socket&);
+    Socket& operator=(Socket&);
 
-  std::string ReceiveLine(int& statusCode);
-  std::string ReceiveBytes();
+    virtual bool Start() = 0; // int& statusCode
 
-  void   Close();
+    virtual std::string ReceiveLine(int& statusCode) = 0;
+    // virtual std::string ReceiveBytes() = 0;
 
-  // The parameter of SendLine is not a const reference
-  // because SendLine modifes the std::string passed.
-  void SendLine (std::string&, int& statusCode);
+    virtual void Close() = 0;
 
-  // The parameter of SendBytes is a const reference
-  // because SendBytes does not modify the std::string passed 
-  // (in contrast to SendLine).
-  void SendBytes(const std::string&);
+    // The parameter of SendLine is not a const reference
+    // because SendLine modifes the std::string passed.
+    virtual void SendLine (std::string&, int& statusCode) = 0;
 
-  void SendBytes(const char*, int);
+    // The parameter of SendBytes is a const reference
+    // because SendBytes does not modify the std::string passed
+    // (in contrast to SendLine).
+    // virtual void SendBytes(const std::string&) = 0;
+
+    // virtual void SendBytes(const char*, int) = 0;
 
 protected:
-  friend class SocketServer;
-  friend class SocketSelect;
+    friend class SocketServer;
 
-  Socket(SOCKET s, int& statusCode);
-  Socket(int& statusCode);
+    virtual bool Start(int& statusCode);
+    // Socket(SOCKET s, int& statusCode);
+    Socket(int& statusCode);
 
-  SOCKET s_;
+    // SOCKET s_;
 
-  int* refCounter_;
+    // int* refCounter_;
 
 private:
-  static void Start(int& statusCode);
-  static void End();
-  static int  nofSockets_;
+  // static void Start(int& statusCode);
+  // static void End();
+  // static int  nofSockets_;
 };
 
-class SocketClient : public Socket {
+class SocketClient : public Socket
+{
 public:
-  SocketClient(const std::string& host, int port, int& statusCode);
+    SocketClient(const std::string& host, int port, int& statusCode);
+
+    virtual bool Start(int& statusCode) override;
+
+    virtual std::string ReceiveLine(int& statusCode) override;
+    // virtual std::string ReceiveBytes() override;
+
+private:
+    SocketClientQt    * m_qtClient = nullptr;
+    // QByteArray         m_readData;
+    // QList<QByteArray>  m_dataQ;
+    // QString            m_hostAddr;
+    // quint16            m_port;
 };
 
-class SocketServer : public Socket {
+class SocketServer : public Socket
+{
 public:
-  SocketServer(int port, int connections, const std::string& adapter_name, int& statusCode, TypeSocket type=BlockingSocket);
+    SocketServer(int port, int connections, int& statusCode, TypeSocket type = BlockingSocket);
 
-  Socket* Accept(int& statusCode);
+    // Socket *Accept(int& statusCode);
+    virtual bool Start(int& statusCode) override;
+
+    virtual std::string ReceiveLine(int& statusCode) override;
+    // virtual std::string ReceiveBytes() override;
+
+private:
+    // quint16             m_port;
+    SocketServerQt       * m_qtServer;
+    // QByteArray          m_readData;
 };
 
-class SocketSelect {
+/*class SocketSelect
+{
 // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/wsapiref_2tiq.asp
   public:
-    SocketSelect(Socket const * const s1, Socket const * const s2=NULL, TypeSocket type=BlockingSocket);
+    SocketSelect(Socket const *const s1, Socket const *const s2 = NULL, TypeSocket type = BlockingSocket);
 
-    bool Readable(Socket const * const s);
+    bool Readable(Socket const *const s);
 
   private:
     fd_set fds_;
-}; 
+};*/
 
 
 #endif
