@@ -30,6 +30,7 @@
 // #include <process.h>
 #include <string>
 #include <iostream>
+#include <QCoreApplication>
 
 unsigned __stdcall Answer(void* a) {
     Socket* s = (Socket*) a;
@@ -50,8 +51,31 @@ unsigned __stdcall Answer(void* a) {
 
 int main(int argc, char* argv[])
 {
+    QCoreApplication a(argc, argv);
 
+    int statusCode = 0;
+    SocketServer in(2323, 1, statusCode);
+    in.Start(statusCode);
 
+    if (statusCode == 0)
+    {
+        while (1) {
+            Socket* s = NULL;
+            s = in.Accept(statusCode);
+
+            if (s) {
+                Answer(s);
+                // unsigned ret;
+                // _beginthreadex((void*)NULL, 0, Answer, (void*) s, 0, &ret);
+                //break;
+            }
+        }
+    } else {
+        in.Close();
+        printf("Something went wrong. The error code - %d.\n", statusCode);
+    }
+
+    return a.exec();
 
     /*WSADATA wsaData;
     int err = WSAStartup(0x202, &wsaData);
@@ -75,5 +99,5 @@ int main(int argc, char* argv[])
         printf("Something went wrong. The error code - %d.\n", err);
     }*/
 
-    return 0;
+    // return 0;
 }

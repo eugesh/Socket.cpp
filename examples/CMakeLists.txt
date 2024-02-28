@@ -6,11 +6,11 @@ SET(CMAKE_AUTORCC ON)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
-#add_executable(Echo_Server echo-server.cpp)
+add_executable(Echo_Server echo-server.cpp)
 if (UNIX)
-    #target_link_libraries(Echo_Server PRIVATE "${SocketLib_BINARY_DIR}/src/libSocketLib.a" Qt5::Core Qt5::Network)
+    target_link_libraries(Echo_Server PRIVATE "${SocketLib_BINARY_DIR}/src/libSocketLib.a" Qt5::Core Qt5::Network)
 else ()
-    #target_link_libraries(Echo_Server PRIVATE "${SocketLib_BINARY_DIR}/src/SocketLib.lib" Qt5::Core Qt5::Network)
+    target_link_libraries(Echo_Server PRIVATE "${SocketLib_BINARY_DIR}/src/SocketLib.lib" Qt5::Core Qt5::Network)
 endif ()
 
 add_executable(Simple_Client simple-client.cpp)

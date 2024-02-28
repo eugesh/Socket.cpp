@@ -18,7 +18,7 @@
 }*/
 
 SocketClientQt::SocketClientQt(const QString& hostAddr, int port, int& statusCode, QObject *parent)
- : Socket(statusCode), QObject(parent)
+ : QObject(parent), Socket(statusCode)
 {
     // m_id = QUuid();
     m_socket    = new QTcpSocket(this);
@@ -32,7 +32,7 @@ SocketClientQt::SocketClientQt(const QString& hostAddr, int port, int& statusCod
 }
 
 SocketClientQt::SocketClientQt(QTcpSocket *socket, int& statusCode)
-    : Socket(statusCode), QObject(socket->parent())
+    : QObject(socket->parent()), Socket(statusCode)
 {
     m_socket = socket;
 
@@ -192,7 +192,7 @@ void SocketClientQt::handleBytesWritten(qint64 bytes)
 }
 
 SocketServerQt::SocketServerQt(quint16 port, int& statusCode, QObject *parent)
- : Socket(statusCode), QObject(parent)
+ : QObject(parent), Socket(statusCode)
 {
     m_port = port;
     // m_srvRxState = UnicanTCPserver::RxIdle;
@@ -239,6 +239,9 @@ accept() {
 Socket* SocketServerQt::Accept(int& statusCode)
 {
     auto socket = m_tcpServer->nextPendingConnection();
+
+    if (!socket)
+        return nullptr;
 
     return new SocketClientQt(socket, statusCode);
 }

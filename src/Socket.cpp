@@ -193,7 +193,7 @@ void SocketServer::SendLine(std::string &line, int &statusCode)
 SocketServer::SocketServer(int port, int connections, int& statusCode, TypeSocket type)
                             : Socket(statusCode)
 {
-
+    m_qtServer = new SocketServerQt(port, statusCode);
 }
 
 Socket* SocketServer::Accept(int& statusCode)
