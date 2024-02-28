@@ -137,7 +137,7 @@ bool SocketClient::Start(int& statusCode)
 
 std::string SocketClient::ReceiveLine(int& statusCode)
 {
-    return std::move(m_qtClient->ReceiveLine(statusCode));
+    return m_qtClient->ReceiveLine(statusCode);
 }
 
 void SocketClient::SendLine(std::string &line, int &statusCode)

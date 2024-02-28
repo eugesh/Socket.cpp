@@ -31,6 +31,8 @@
 #include <string>
 #include <iostream>
 #include <QCoreApplication>
+#include <QDebug>
+#include <QString>
 
 unsigned __stdcall Answer(void* a) {
     Socket* s = (Socket*) a;
@@ -41,6 +43,8 @@ unsigned __stdcall Answer(void* a) {
         if (r.empty())
             break;
         std::cout << "The line we received - " << r;
+        qInfo() << "The line we received - " << QString::fromStdString(r);
+        std::cout.flush();
         s->SendLine(r, statusCode);
     }
 

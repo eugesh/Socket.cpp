@@ -108,6 +108,8 @@ void SocketClientQt::start()
     // m_sp_busy=false;
     if (m_socket->state() != QAbstractSocket::ConnectingState)
         m_socket->connectToHost(m_hostAddr, m_port);
+
+    m_socket->waitForConnected(1000);
 }
 
 bool SocketClientQt::Start(int &statusCode)
@@ -210,8 +212,7 @@ SocketServerQt::~SocketServerQt()
 
 bool SocketServerQt::Start(int &statusCode) // int& statusCode
 {
-    if (! m_tcpServer->listen(QHostAddress::Any, m_port))
-    {
+    if (! m_tcpServer->listen(QHostAddress::Any, m_port)) {
         qCritical() << "Unable to start the server: " << qPrintable(m_tcpServer->errorString());
 
         m_tcpServer->close();
@@ -238,12 +239,16 @@ accept() {
 
 Socket* SocketServerQt::Accept(int& statusCode)
 {
-    auto socket = m_tcpServer->nextPendingConnection();
+    m_tcpServer->waitForNewConnection();
+    // auto socket = m_tcpServer->nextPendingConnection();
 
-    if (!socket)
+    // if (!socket)
+        //return nullptr;
+
+    if (m_clientSocketList.isEmpty())
         return nullptr;
 
-    return new SocketClientQt(socket, statusCode);
+    return new SocketClientQt(m_clientSocketList.back(), statusCode);
 }
 
 void SocketServerQt::SendLine(std::string &line, int &statusCode)
@@ -276,7 +281,8 @@ void SocketServerQt::slotReadClient()
 
 void SocketServerQt::slotDisconnected()
 {
-
+    if (!m_clientSocketList.isEmpty())
+        m_clientSocketList.pop_back();
 }
 
 void SocketServerQt::slotCloseServer()
@@ -294,6 +300,8 @@ SocketServerQt::slotNewConnection()
     if (!clientSocket) {
         return;
     }
+
+    m_clientSocketList.push_back(clientSocket);
 
     connect(clientSocket, &QTcpSocket::disconnected,
             this, &SocketServerQt::slotDisconnected, Qt::UniqueConnection);
