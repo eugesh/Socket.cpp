@@ -11,11 +11,11 @@
         }\
     ); *l //-- Use AutoDisconnect(conn1) = connect(....);
 
-SocketQt::SocketQt(QObject *parent)
+/*SocketQt::SocketQt(QObject *parent)
     : QObject{parent}
 {
 
-}
+}*/
 
 SocketClientQt::SocketClientQt(const QString& hostAddr, int port, int& statusCode, QObject *parent)
  : Socket(statusCode), QObject(parent)
@@ -28,6 +28,22 @@ SocketClientQt::SocketClientQt(const QString& hostAddr, int port, int& statusCod
     // m_srvRxState = UnicanTCPclient::RxIdle;
     // m_is_hardware = is_hardware;
 
+    initQt();
+}
+
+SocketClientQt::SocketClientQt(QTcpSocket *socket, int& statusCode)
+    : Socket(statusCode), QObject(socket->parent())
+{
+    m_socket = socket;
+
+    m_hostAddr = socket->peerAddress().toString();
+    m_port = socket->peerPort();
+
+    initQt();
+}
+
+void SocketClientQt::initQt()
+{
     connect(m_socket, &QTcpSocket::connected,
             this, &SocketClientQt::slotConnected);
     connect(m_socket, &QTcpSocket::readyRead,
@@ -94,7 +110,7 @@ void SocketClientQt::start()
         m_socket->connectToHost(m_hostAddr, m_port);
 }
 
-bool SocketClientQt::Start()
+bool SocketClientQt::Start(int &statusCode)
 {
     start();
 
@@ -183,7 +199,16 @@ SocketServerQt::SocketServerQt(quint16 port, int& statusCode, QObject *parent)
     m_tcpServer = new QTcpServer(this);
 }
 
-bool SocketServerQt::Start() // int& statusCode
+SocketServerQt::~SocketServerQt()
+{
+    if (m_tcpServer) {
+        m_tcpServer->close();
+        delete m_tcpServer;
+        m_tcpServer = nullptr;
+    }
+}
+
+bool SocketServerQt::Start(int &statusCode) // int& statusCode
 {
     if (! m_tcpServer->listen(QHostAddress::Any, m_port))
     {
@@ -199,11 +224,31 @@ bool SocketServerQt::Start() // int& statusCode
     return true;
 }
 
+void SocketServerQt::Close()
+{
+    if (m_tcpServer) {
+        m_tcpServer->close();
+    }
+}
 
 /*
 accept() {
     rerturn m_tcpServer->nextPendingConnection();
 }*/
+
+Socket* SocketServerQt::Accept(int& statusCode)
+{
+    auto socket = m_tcpServer->nextPendingConnection();
+
+    return new SocketClientQt(socket, statusCode);
+}
+
+void SocketServerQt::SendLine(std::string &line, int &statusCode)
+{
+    for (auto &client : m_clientSocketList) {
+        client->write(QByteArray::fromStdString(line));
+    }
+}
 
 std::string SocketServerQt::ReceiveLine(int& statusCode)
 {

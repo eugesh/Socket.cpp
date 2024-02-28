@@ -44,17 +44,18 @@ public:
     // Socket();
     Socket(const Socket&);
     Socket& operator=(Socket&);
+    Socket(int &statusCode);
 
-    virtual bool Start() = 0; // int& statusCode
+    virtual bool Start(int &statusCode) = 0; // int& statusCode
 
-    virtual std::string ReceiveLine(int& statusCode) = 0;
+    virtual std::string ReceiveLine(int &statusCode) = 0;
     // virtual std::string ReceiveBytes() = 0;
 
     virtual void Close() = 0;
 
     // The parameter of SendLine is not a const reference
     // because SendLine modifes the std::string passed.
-    virtual void SendLine (std::string&, int& statusCode) = 0;
+    virtual void SendLine(std::string &line, int &statusCode) = 0;
 
     // The parameter of SendBytes is a const reference
     // because SendBytes does not modify the std::string passed
@@ -66,9 +67,8 @@ public:
 protected:
     friend class SocketServer;
 
-    virtual bool Start(int& statusCode);
+    // virtual bool Start(int &statusCode);
     // Socket(SOCKET s, int& statusCode);
-    Socket(int& statusCode);
 
     // SOCKET s_;
 
@@ -83,12 +83,17 @@ private:
 class SocketClient : public Socket
 {
 public:
-    SocketClient(const std::string& host, int port, int& statusCode);
+    SocketClient(const std::string &host, int port, int &statusCode);
+    ~SocketClient() {}
 
-    virtual bool Start(int& statusCode) override;
+    virtual bool Start(int &statusCode) override;
 
-    virtual std::string ReceiveLine(int& statusCode) override;
+    virtual std::string ReceiveLine(int &statusCode) override;
     // virtual std::string ReceiveBytes() override;
+
+    virtual void SendLine(std::string &line, int &statusCode) override;
+
+    virtual void Close() override;
 
 private:
     SocketClientQt    * m_qtClient = nullptr;
@@ -101,13 +106,18 @@ private:
 class SocketServer : public Socket
 {
 public:
-    SocketServer(int port, int connections, int& statusCode, TypeSocket type = BlockingSocket);
+    SocketServer(int port, int connections, int &statusCode, TypeSocket type=BlockingSocket);
+    virtual ~SocketServer() {}
 
-    // Socket *Accept(int& statusCode);
-    virtual bool Start(int& statusCode) override;
+    Socket *Accept(int &statusCode);
+    virtual bool Start(int &statusCode) override;
 
     virtual std::string ReceiveLine(int& statusCode) override;
     // virtual std::string ReceiveBytes() override;
+
+    virtual void SendLine(std::string &line, int &statusCode) override;
+
+    virtual void Close() override;
 
 private:
     // quint16             m_port;

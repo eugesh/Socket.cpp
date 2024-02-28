@@ -7,7 +7,7 @@
 
 #include "Socket.h"
 
-class SocketQt : public QObject
+/*class SocketQt : public QObject
 {
     Q_OBJECT
 public:
@@ -18,16 +18,17 @@ public:
 
 signals:
 
-};
+};*/
 
-class SocketClientQt : public Socket, public QObject
+class SocketClientQt : public QObject, public Socket
 {
     Q_OBJECT
 public:
     explicit SocketClientQt(const QString &host, int port, int &statusCode, QObject *parent=nullptr);
+    explicit SocketClientQt(QTcpSocket *socket, int& statusCode);
     virtual ~SocketClientQt();
 
-    virtual bool Start() override; // int& statusCode
+    virtual bool Start(int &statusCode) override; // int& statusCode
 
     virtual void Close() override;
 
@@ -50,6 +51,9 @@ signals:
     void clientDisconnected();
 
 private:
+    void initQt();
+
+private:
     QTcpSocket       * m_socket = nullptr;
     QByteArray         m_readData;
     QList<QByteArray>  m_dataQ;
@@ -57,17 +61,23 @@ private:
     quint16            m_port;
 };
 
-class SocketServerQt : public Socket, public QObject
+class SocketServerQt : public QObject, public Socket
 {
     Q_OBJECT
 public:
     explicit SocketServerQt(quint16 port, int &statusCode, QObject *parent=nullptr);
+    virtual ~SocketServerQt();
 
-    virtual bool Start() override; // int& statusCode
+    virtual bool Start(int &statusCode) override; // int& statusCode
 
+    virtual void Close() override;
+
+    virtual void SendLine(std::string &line, int &statusCode) override;
 
     virtual std::string ReceiveLine(int &statusCode) override;
     // virtual std::string ReceiveBytes() override;
+
+    Socket* Accept(int& statusCode);
 
 signals:
     // void newClientAdded(ucd_client_info_t newcl);

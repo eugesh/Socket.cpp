@@ -27,7 +27,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "Socket.h"
-#include <process.h>
+// #include <process.h>
 #include <string>
 #include <iostream>
 
@@ -50,7 +50,10 @@ unsigned __stdcall Answer(void* a) {
 
 int main(int argc, char* argv[])
 {
-    WSADATA wsaData;
+
+
+
+    /*WSADATA wsaData;
     int err = WSAStartup(0x202, &wsaData);
 
     if (err == 0)
@@ -70,7 +73,7 @@ int main(int argc, char* argv[])
         WSACleanup();
     } else {
         printf("Something went wrong. The error code - %d.\n", err);
-    }
+    }*/
 
     return 0;
 }

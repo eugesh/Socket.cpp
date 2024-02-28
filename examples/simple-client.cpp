@@ -1,7 +1,8 @@
-#pragma comment(lib, "Ws2_32.lib")
+//#pragma once // comment(lib, "Ws2_32.lib")
 
 #include "Socket.h"
 #include <iostream>
+#include <QObject>
 
 using namespace std;
 

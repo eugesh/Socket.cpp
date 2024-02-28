@@ -53,19 +53,19 @@ void Socket::End() {
 
 Socket::Socket(int& statusCode)
 {
-    Start(statusCode);
+    /*Start(statusCode);
     if (statusCode != 0) {
         std::cerr << "Failed to start a socket.\n";
         return;
-    }
+    }*/
 
     statusCode = 0;
 }
 
-bool Socket::Start(int& statusCode)
+/*bool Socket::Start(int& statusCode)
 {
-
-}
+    return true;
+}*/
 
 /*Socket::Socket(SOCKET s, int& statusCode) : s_(s) {
   Start(statusCode);
@@ -78,7 +78,8 @@ bool Socket::Start(int& statusCode)
   statusCode = 0;
 };*/
 
-Socket::~Socket() {
+Socket::~Socket()
+{
   /*if (! --(*refCounter_)) {
     Close();
     delete refCounter_;
@@ -114,16 +115,39 @@ void Socket::Close()
   //closesocket(s_);
 }
 
+
+SocketClient::SocketClient(const std::string& host, int port, int& statusCode)
+    : Socket(statusCode)
+{
+    if (statusCode != 0)
+        return; // Если произошла ошибка в конструкторе Socket
+
+    m_qtClient = new SocketClientQt(QString::fromStdString(host), port, statusCode);
+
+    statusCode = 0;
+}
+
+
 bool SocketClient::Start(int& statusCode)
 {
     statusCode = 0;
 
-    return m_qtClient->Start();
+    return m_qtClient->Start(statusCode);
 }
 
 std::string SocketClient::ReceiveLine(int& statusCode)
 {
     return std::move(m_qtClient->ReceiveLine(statusCode));
+}
+
+void SocketClient::SendLine(std::string &line, int &statusCode)
+{
+    m_qtClient->SendLine(line, statusCode);
+}
+
+void SocketClient::Close()
+{
+    m_qtClient->Close();
 }
 
 /*std::string SocketClient::ReceiveBytes()
@@ -135,7 +159,7 @@ bool SocketServer::Start(int& statusCode)
 {
     statusCode = 0;
 
-    return m_qtServer->Start();
+    return m_qtServer->Start(statusCode);
 }
 
 /*if (! m_tcpServer->listen(QHostAddress::Any, m_port)) {
@@ -156,6 +180,11 @@ std::string SocketServer::ReceiveLine(int& statusCode)
     return std::move(m_qtServer->ReceiveLine(statusCode));
 }
 
+void SocketServer::SendLine(std::string &line, int &statusCode)
+{
+    m_qtServer->SendLine(line, statusCode);
+}
+
 /*std::string SocketServer::ReceiveBytes()
 {
     return {};
@@ -167,9 +196,17 @@ SocketServer::SocketServer(int port, int connections, int& statusCode, TypeSocke
 
 }
 
-/*Socket* SocketServer::Accept(int& statusCode)
+Socket* SocketServer::Accept(int& statusCode)
 {
-    SOCKET new_sock = accept(s_, 0, 0);
+     return m_qtServer->Accept(statusCode);
+}
+
+void SocketServer::Close()
+{
+    m_qtServer->Close();
+}
+
+/*    SOCKET new_sock = accept(s_, 0, 0);
     if (new_sock == INVALID_SOCKET) {
         int rc = WSAGetLastError();
         if(rc==WSAEWOULDBLOCK) {
@@ -190,16 +227,6 @@ SocketServer::SocketServer(int port, int connections, int& statusCode, TypeSocke
     statusCode = 0;
     return r;
 }*/
-
-SocketClient::SocketClient(const std::string& host, int port, int& statusCode) : Socket(statusCode)
-{
-    if (statusCode != 0)
-        return; // Если произошла ошибка в конструкторе Socket
-
-    m_qtClient = new SocketClientQt(QString::fromStdString(host), port, statusCode);
-
-    statusCode = 0;
-}
 
 /* SocketClient::SocketClient(const std::string& host, int port, int& statusCode) : Socket(statusCode)
 {
