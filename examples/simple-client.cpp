@@ -27,9 +27,9 @@ int main(int argc, char* argv[])
             int statusCode = 0;
             s.SendLine(clientMessage, statusCode);
             string l;
-            do {
-                string l = s.ReceiveLine(statusCode);
-            } while (l.empty());
+            // do {
+            l = s.ReceiveLine(statusCode);
+            //} while (l.empty());
                 // continue;
             cout << l;
             qInfo() << "The line we received - " << QString::fromStdString(l);

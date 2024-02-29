@@ -49,6 +49,7 @@ public slots:
 
 signals:
     void clientDisconnected();
+    void dataRead();
 
 private:
     void initQt();
@@ -82,6 +83,7 @@ public:
 signals:
     // void newClientAdded(ucd_client_info_t newcl);
     void signalDisconnected(quint32 clientId);
+    void dataRead();
 
 public slots:
     virtual void slotNewConnection();

@@ -58,8 +58,8 @@ void SocketClientQt::initQt()
 #endif
     connect(m_socket, &QTcpSocket::disconnected,
             this, &SocketClientQt::slotDisconnected);
-    connect(m_socket, &QIODevice::bytesWritten,
-            this, &SocketClientQt::handleBytesWritten);
+    //connect(m_socket, &QIODevice::bytesWritten,
+            //this, &SocketClientQt::handleBytesWritten);
 
     // changeStatus(UnicanTCPclient::ConnNone);
     // changeHwStatus(UnicanTCPclient::HwConnUnknown);
@@ -77,6 +77,16 @@ SocketClientQt::~SocketClientQt()
 
 std::string SocketClientQt::ReceiveLine(int& statusCode)
 {
+    if (m_readData.isEmpty()) {
+        QEventLoop _loop;
+        AutoDisconnect(conn) = connect(this, &SocketClientQt::dataRead, [&_loop]() {
+            // qDebug() << "Client connected!";
+            _loop.exit();
+        });
+
+        _loop.exec();
+    }
+
     std::string data = m_readData.toStdString();
 
     m_readData.clear();
@@ -99,6 +109,8 @@ void SocketClientQt::slotDisconnected()
 void SocketClientQt::slotReadyRead()
 {
     m_readData.append(m_socket->readAll());
+
+    emit dataRead();
 }
 
 void SocketClientQt::start()
@@ -239,7 +251,10 @@ accept() {
 
 Socket* SocketServerQt::Accept(int& statusCode)
 {
-    m_tcpServer->waitForNewConnection();
+    if (m_clientSocketList.isEmpty())
+        m_tcpServer->waitForNewConnection();
+    else if (m_clientSocketList.back()->state() != QAbstractSocket::ConnectedState)
+        m_tcpServer->waitForNewConnection();
     // auto socket = m_tcpServer->nextPendingConnection();
 
     // if (!socket)
@@ -260,6 +275,16 @@ void SocketServerQt::SendLine(std::string &line, int &statusCode)
 
 std::string SocketServerQt::ReceiveLine(int& statusCode)
 {
+    if (m_readData.isEmpty()) {
+        QEventLoop _loop;
+        AutoDisconnect(conn) = connect(this, &SocketServerQt::dataRead, [&_loop]() {
+            // qDebug() << "Client connected!";
+            _loop.exit();
+        });
+
+        _loop.exec();
+    }
+
     std::string data = m_readData.toStdString();
 
     m_readData.clear();
@@ -277,6 +302,8 @@ void SocketServerQt::slotReadClient()
     QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
 
     m_readData.append(clientSocket->readAll());
+
+    emit dataRead();
 }
 
 void SocketServerQt::slotDisconnected()
@@ -308,16 +335,24 @@ SocketServerQt::slotNewConnection()
     connect(clientSocket, &QTcpSocket::readyRead,
             this, &SocketServerQt::slotReadClient, Qt::UniqueConnection);
 
-    QEventLoop _loop;
-    QTimer waitForConnectedTimer;
-    AutoDisconnect(conn) = connect(&waitForConnectedTimer, &QTimer::timeout, [&_loop]() {
-        // qDebug() << "Client connected!";
-        _loop.exit();
-    });
+    m_tcpServer->waitForNewConnection();
+    if (!clientSocket->waitForReadyRead(1000)) {
+        // emit error(socket.error(), socket.errorString());
+        return;
+    }
 
-    waitForConnectedTimer.start(10000);
+    if (clientSocket->state() != QAbstractSocket::ConnectedState) {
+        QEventLoop _loop;
+        QTimer waitForConnectedTimer;
+        AutoDisconnect(conn) = connect(&waitForConnectedTimer, &QTimer::timeout, [&_loop]() {
+            // qDebug() << "Client connected!";
+            _loop.exit();
+        });
 
-    _loop.exec();
+        waitForConnectedTimer.start(10000);
+
+        _loop.exec();
+    }
 
     qInfo() << "New TCP connection";
 }

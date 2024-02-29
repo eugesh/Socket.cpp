@@ -34,14 +34,14 @@
 #include <QDebug>
 #include <QString>
 
-unsigned __stdcall Answer(void* a) {
-    Socket* s = (Socket*) a;
+unsigned Answer(Socket* s) {
+    // Socket* s = (Socket*) a;
 
     while (1) {
         int statusCode;
         std::string r = s->ReceiveLine(statusCode);
-        if (r.empty())
-            break;
+        //if (r.empty())
+            //break;
         std::cout << "The line we received - " << r;
         qInfo() << "The line we received - " << QString::fromStdString(r);
         std::cout.flush();
@@ -68,7 +68,10 @@ int main(int argc, char* argv[])
             s = in.Accept(statusCode);
 
             if (s) {
-                Answer(s);
+                // Answer(s);
+                std::string r = in.ReceiveLine(statusCode);
+                in.SendLine(r, statusCode);
+                // s->SendLine(r, statusCode);
                 // unsigned ret;
                 // _beginthreadex((void*)NULL, 0, Answer, (void*) s, 0, &ret);
                 //break;
