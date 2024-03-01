@@ -1,4 +1,5 @@
 #include <QEventLoop>
+#include <QCoreApplication>
 #include <QTimer>
 
 #include "socketqt.h"
@@ -16,6 +17,19 @@
 {
 
 }*/
+
+static inline bool isCoreApp()
+{
+    // bool aIsGuiApp = false;
+    // QApplication* aApplication = qobject_cast<QApplication*>(QCoreApplication::instance());
+    QCoreApplication* aApplication = QCoreApplication::instance();
+    if (aApplication == nullptr)
+        return false;
+    else
+        return true;
+    // aIsGuiApp = (aApplication->type() == QCoreApplication::GuiClient);
+    //return aIsGuiApp;
+}
 
 SocketClientQt::SocketClientQt(const QString& hostAddr, int port, int& statusCode, QObject *parent)
  : QObject(parent), Socket(statusCode)
@@ -78,13 +92,17 @@ SocketClientQt::~SocketClientQt()
 std::string SocketClientQt::ReceiveLine(int& statusCode)
 {
     if (m_readData.isEmpty()) {
-        QEventLoop _loop;
-        AutoDisconnect(conn) = connect(this, &SocketClientQt::dataRead, [&_loop]() {
-            // qDebug() << "Client connected!";
-            _loop.exit();
-        });
+        if (isCoreApp()) {
+            QEventLoop _loop;
+            AutoDisconnect(conn) = connect(this, &SocketClientQt::dataRead, [&_loop]() {
+                // qDebug() << "Client connected!";
+                _loop.exit();
+            });
 
-        _loop.exec();
+            _loop.exec();
+        } else {
+            _sleep(100);
+        }
     }
 
     std::string data = m_readData.toStdString();
@@ -276,13 +294,17 @@ void SocketServerQt::SendLine(std::string &line, int &statusCode)
 std::string SocketServerQt::ReceiveLine(int& statusCode)
 {
     if (m_readData.isEmpty()) {
-        QEventLoop _loop;
-        AutoDisconnect(conn) = connect(this, &SocketServerQt::dataRead, [&_loop]() {
-            // qDebug() << "Client connected!";
-            _loop.exit();
-        });
+        if (isCoreApp()) {
+            QEventLoop _loop;
+            AutoDisconnect(conn) = connect(this, &SocketServerQt::dataRead, [&_loop]() {
+                // qDebug() << "Client connected!";
+                _loop.exit();
+            });
 
-        _loop.exec();
+            _loop.exec();
+        } else {
+            _sleep(100);
+        }
     }
 
     std::string data = m_readData.toStdString();
@@ -341,18 +363,22 @@ SocketServerQt::slotNewConnection()
         return;
     }
 
-    if (clientSocket->state() != QAbstractSocket::ConnectedState) {
-        QEventLoop _loop;
-        QTimer waitForConnectedTimer;
-        AutoDisconnect(conn) = connect(&waitForConnectedTimer, &QTimer::timeout, [&_loop]() {
-            // qDebug() << "Client connected!";
-            _loop.exit();
-        });
+    if (isCoreApp()) { // ToDo: get rid of that -->
+        if (clientSocket->state() != QAbstractSocket::ConnectedState) {
+            QEventLoop _loop;
+            QTimer waitForConnectedTimer;
+            AutoDisconnect(conn) = connect(&waitForConnectedTimer, &QTimer::timeout, [&_loop]() {
+                // qDebug() << "Client connected!";
+                _loop.exit();
+            });
 
-        waitForConnectedTimer.start(10000);
+            waitForConnectedTimer.start(10000);
 
-        _loop.exec();
-    }
+            _loop.exec();
+        }
+    } else {
+        _sleep(1000);
+    } // ToDo: get rid of that <--
 
     qInfo() << "New TCP connection";
 }
