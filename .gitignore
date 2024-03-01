@@ -1,3 +1,60 @@
+*.lib
+*.dll
+*.exe
 *.swp
-build
+*.user
+*.orig
+*.back
+*.bck
+*.bak
+*.so
+*.a
+*.o
+*.la
+*.lai
+*.dylib
+*.slo
+*.lo
+
+# Qt-es
+object_script.*.Release
+object_script.*.Debug
+*_plugin_import.cpp
+/.qmake.cache
+/.qmake.stash
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+
+# Qt unit tests
+target_wrapper.*
+
+# QtCreator
+*.autosave
+*./user
+*.bak
+
+# QtCreator Qml
+*.qmlproject.user
+*.qmlproject.user.*
+
+# QtCreator CMake
+CMakeLists.txt.user*
+
+# Visual Studio
+*.vcxproj.*
+*.vcxproj
+
+Makefile*
 build-*
+build
+debug
+release
